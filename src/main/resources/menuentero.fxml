@@ -1,0 +1,76 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<?import javafx.geometry.*?>
+<?import javafx.scene.control.*?>
+<?import javafx.scene.layout.*?>
+<?import javafx.scene.text.*?>
+
+<VBox alignment="CENTER" spacing="15.0" xmlns="http://javafx.com/javafx/17.0.12" stylesheets="@style.css" xmlns:fx="http://javafx.com/fxml/1" fx:controller="controller.matricesController">
+    <padding>
+        <Insets bottom="20.0" left="20.0" right="20.0" top="20.0" />
+    </padding>
+
+    <Label style="-fx-font-weight: bold;" text="Resolver Sistema 3x3 (Gauss-Jordan)">
+        <font>
+            <Font size="18.0" />
+        </font>
+    </Label>
+
+    <Separator />
+
+    <GridPane fx:id="inputGrid" alignment="CENTER" hgap="10.0" vgap="10.0">
+        <columnConstraints>
+            <ColumnConstraints />
+            <ColumnConstraints />
+            <ColumnConstraints />
+            <ColumnConstraints minWidth="10.0" prefWidth="30.0" /> <ColumnConstraints />
+        </columnConstraints>
+        <rowConstraints>
+            <RowConstraints />
+            <RowConstraints />
+            <RowConstraints />
+            <RowConstraints /> </rowConstraints>
+
+        <Label style="-fx-font-weight: bold;" text="x" GridPane.columnIndex="0" GridPane.rowIndex="0" />
+        <Label style="-fx-font-weight: bold;" text="y" GridPane.columnIndex="1" GridPane.rowIndex="0" />
+        <Label style="-fx-font-weight: bold;" text="z" GridPane.columnIndex="2" GridPane.rowIndex="0" />
+        <Label style="-fx-font-weight: bold; -fx-alignment: center;" text="=" GridPane.columnIndex="3" GridPane.rowIndex="0" />
+        <Label style="-fx-font-weight: bold;" text="b" GridPane.columnIndex="4" GridPane.rowIndex="0" />
+
+        <TextField fx:id="a11" prefWidth="60" promptText="ej: 1" GridPane.columnIndex="0" GridPane.rowIndex="1" />
+        <TextField fx:id="a12" prefWidth="60" promptText="ej: -2" GridPane.columnIndex="1" GridPane.rowIndex="1" />
+        <TextField fx:id="a13" prefWidth="60" promptText="ej: 3" GridPane.columnIndex="2" GridPane.rowIndex="1" />
+        <Label style="-fx-font-weight: bold; -fx-alignment: center;" text="|" GridPane.columnIndex="3" GridPane.rowIndex="1" />
+        <TextField fx:id="b1" prefWidth="60" promptText="ej: 11" GridPane.columnIndex="4" GridPane.rowIndex="1" />
+
+        <TextField fx:id="a21" prefWidth="60" promptText="ej: 4" GridPane.columnIndex="0" GridPane.rowIndex="2" />
+        <TextField fx:id="a22" prefWidth="60" promptText="ej: 1" GridPane.columnIndex="1" GridPane.rowIndex="2" />
+        <TextField fx:id="a23" prefWidth="60" promptText="ej: -1" GridPane.columnIndex="2" GridPane.rowIndex="2" />
+        <Label style="-fx-font-weight: bold; -fx-alignment: center;" text="|" GridPane.columnIndex="3" GridPane.rowIndex="2" />
+        <TextField fx:id="b2" prefWidth="60" promptText="ej: 4" GridPane.columnIndex="4" GridPane.rowIndex="2" />
+
+        <TextField fx:id="a31" prefWidth="60" promptText="ej: 2" GridPane.columnIndex="0" GridPane.rowIndex="3" />
+        <TextField fx:id="a32" prefWidth="60" promptText="ej: -1" GridPane.columnIndex="1" GridPane.rowIndex="3" />
+        <TextField fx:id="a33" prefWidth="60" promptText="ej: 3" GridPane.columnIndex="2" GridPane.rowIndex="3" />
+        <Label style="-fx-font-weight: bold; -fx-alignment: center;" text="|" GridPane.columnIndex="3" GridPane.rowIndex="3" />
+        <TextField fx:id="b3" prefWidth="60" promptText="ej: 10" GridPane.columnIndex="4" GridPane.rowIndex="3" />
+
+    </GridPane>
+
+    <HBox alignment="CENTER" spacing="10.0">
+        <Button onAction="#resolverSistema" text="Resolver por Gauss-Jordan" />
+        <Button onAction="#limpiarCampos" text="Limpiar" />
+        <Button onAction="#volverAlMenu" text="Volver al Menú" /> </HBox>
+
+    <Separator />
+
+    <VBox alignment="CENTER_LEFT" spacing="5.0">
+        <Label style="-fx-font-weight: bold;" text="Clasificación del Sistema:" />
+        <Label fx:id="systemClassification" style="-fx-text-fill: blue;" text="Esperando entrada..." />
+
+        <Label style="-fx-font-weight: bold; margin-top: 10;" text="Soluciones:" />
+        <Label fx:id="solutionX" text="x =" />
+        <Label fx:id="solutionY" text="y =" />
+        <Label fx:id="solutionZ" text="z =" />
+    </VBox>
+</VBox>
