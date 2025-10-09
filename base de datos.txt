@@ -1,0 +1,26 @@
+-- 1. Crear la base de datos (Si no existe)
+CREATE DATABASE IF NOT EXISTS tpMatematica;
+USE tpMatematica;
+
+-- 2. Crear la tabla para almacenar los cálculos de área
+CREATE TABLE IF NOT EXISTS CalculoArea (
+    id INT PRIMARY KEY AUTO_INCREMENT, -- Uso de INT y AUTO_INCREMENT
+    
+    -- Parámetros de la función f(x) = ax² + bx + c
+    coef_a DOUBLE NOT NULL,
+    coef_b DOUBLE NOT NULL,
+    coef_c DOUBLE NOT NULL,
+    
+    -- Parámetros de la integral
+    intervalo_a DOUBLE NOT NULL,
+    intervalo_b DOUBLE NOT NULL,
+    num_rectangulos INT NOT NULL,
+    
+    -- Resultados del cálculo
+    suma_inferior DOUBLE NOT NULL,
+    suma_superior DOUBLE NOT NULL,
+    area_real DOUBLE NOT NULL,
+    
+    -- Metadatos
+    fecha_calculo TIMESTAMP DEFAULT CURRENT_TIMESTAMP 
+);

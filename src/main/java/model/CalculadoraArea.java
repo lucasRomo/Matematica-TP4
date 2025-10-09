@@ -13,6 +13,17 @@ public class CalculadoraArea {
         this.b = b;
         this.c = c;
     }
+    public double getA() {
+        return a;
+    }
+
+    public double getB() {
+        return b;
+    }
+
+    public double getC() {
+        return c;
+    }
 
     /** Evalúa la función cuadrática en un punto x. */
     public double evaluar(double x) {

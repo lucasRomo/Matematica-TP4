@@ -60,6 +60,8 @@
 
     <HBox alignment="CENTER" spacing="10.0">
         <Button onAction="#calcularArea" text="Calcular Área" />
+        <Button onAction="#guardarCalculoEnBD" text="Guardar" />
+        <Button onAction="#mostrarHistorial" text="Ver Historial" />
         <Button onAction="#limpiarCampos" text="Limpiar" />
         <Button onAction="#volverAlMenu" text="Volver al Menú" />
     </HBox>

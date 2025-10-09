@@ -1,5 +1,8 @@
 package controller;
 
+import dao.AreaDAO;
+import model.CalculadoraArea;
+import model.CalculoGuardado;
 import javafx.event.ActionEvent;
 import javafx.fxml.FXML;
 import javafx.fxml.FXMLLoader;
@@ -10,15 +13,16 @@ import javafx.scene.control.Label;
 import javafx.scene.control.TextField;
 import javafx.scene.control.Tooltip;
 import javafx.scene.control.CheckBox;
+import javafx.scene.control.ChoiceDialog;
 import javafx.scene.layout.Pane;
 import javafx.scene.paint.Color;
 import javafx.scene.shape.Line;
 import javafx.scene.shape.Rectangle;
 import javafx.stage.Stage;
-import model.CalculadoraArea;
 import java.io.IOException;
 import java.util.List;
 import java.util.Arrays;
+// import javafx.scene.control.Alert;
 
 public class areaController {
 
@@ -46,12 +50,20 @@ public class areaController {
     private CalculadoraArea lastCalculadora;
     private double lastA, lastB;
     private int lastN;
+    // 'calculationSuccessful' indica que hay datos válidos en pantalla.
     private boolean calculationSuccessful = false;
     // -----------------------------------------------------------
+
+    // Instancia del DAO para interactuar con la base de datos
+    private AreaDAO areaDAO;
 
     @FXML
     private void initialize() {
         lblMensajeError.setText("");
+
+        // Inicializar el DAO y asegurar la creación de la tabla
+        areaDAO = new AreaDAO();
+        areaDAO.createTable();
 
         camposDeEntrada = Arrays.asList(
                 txtA, txtB, txtC,
@@ -67,8 +79,7 @@ public class areaController {
             });
         }
 
-        // 2. Configurar listeners para CheckBoxes (NUEVO)
-        // Al hacer click, llama a redrawGraph para actualizar la vista.
+        // 2. Configurar listeners para CheckBoxes
         chkMostrarInferior.setOnAction(e -> redrawGraph());
         chkMostrarSuperior.setOnAction(e -> redrawGraph());
     }
@@ -78,7 +89,6 @@ public class areaController {
     //-------------------------------------------------------------
     private void redrawGraph() {
         if (calculationSuccessful && lastCalculadora != null) {
-            // Llama a dibujarGrafico usando los últimos parámetros guardados
             dibujarGrafico(lastCalculadora, lastA, lastB, lastN);
         }
     }
@@ -113,15 +123,52 @@ public class areaController {
     }
 
     //-------------------------------------------------------------
-    // MÉTODO CALCULAR ÁREA
+    // MÉTODO: GUARDAR EL CÁLCULO ACTUAL EN LA BASE DE DATOS (CORREGIDO)
+    //-------------------------------------------------------------
+    @FXML
+    private void guardarCalculoEnBD(ActionEvent event) {
+        if (!calculationSuccessful) {
+            lblMensajeError.setText("Error: Debe calcular un área primero antes de guardar.");
+            return;
+        }
+
+        try {
+            // CORRECCIÓN SINTAXIS: Usar String.replace(String, String) para cambiar coma por punto.
+            double sumaInferior = Double.parseDouble(lblSumaInferior.getText().replace(",", "."));
+            double sumaSuperior = Double.parseDouble(lblSumaSuperior.getText().replace(",", "."));
+            double areaReal = Double.parseDouble(lblAreaReal.getText().replace(",", "."));
+
+            // La llamada a lastCalculadora.getA/B/C ahora funciona si CalculadoraArea fue modificada.
+            CalculoGuardado calculo = new CalculoGuardado(
+                    lastCalculadora.getA(), lastCalculadora.getB(), lastCalculadora.getC(),
+                    lastA, lastB, lastN,
+                    sumaInferior, sumaSuperior, areaReal
+            );
+
+            areaDAO.guardarCalculo(calculo);
+            lblMensajeError.setText("Cálculo guardado exitosamente en el historial.");
+
+        } catch (NumberFormatException e) {
+            lblMensajeError.setText("Error al parsear resultados. Verifique el formato de los números. (Detalle: " + e.getMessage() + ")");
+            e.printStackTrace();
+        } catch (Exception e) {
+            lblMensajeError.setText("Error al guardar el cálculo: " + e.getMessage());
+            e.printStackTrace();
+        }
+    }
+
+
+    //-------------------------------------------------------------
+    // MÉTODO CALCULAR ÁREA (SOLO CALCULA Y DIBUJA, NO GUARDA)
     //-------------------------------------------------------------
     @FXML
     private void calcularArea(ActionEvent event) {
         lblMensajeError.setText("");
         paneGrafico.getChildren().clear();
-        this.calculationSuccessful = false; // Resetear el estado
+        this.calculationSuccessful = false;
 
         try {
+            // Al leer, usamos .replace(',', '.') porque el usuario puede usar coma en el TextField
             double a = Double.parseDouble(txtA.getText().replace(',', '.'));
             double b = Double.parseDouble(txtB.getText().replace(',', '.'));
             double c = Double.parseDouble(txtC.getText().replace(',', '.'));
@@ -151,29 +198,89 @@ public class areaController {
             double sumaSuperior = calculadora.calcularSumaSuperior(inicioIntervalo, finIntervalo, n);
             double areaReal = calculadora.calcularAreaReal(inicioIntervalo, finIntervalo);
 
-
+            // Al mostrar, usamos String.format, que por defecto usa el punto ('.')
             String formato = "%.4f";
             lblSumaInferior.setText(String.format(formato, sumaInferior));
             lblSumaSuperior.setText(String.format(formato, sumaSuperior));
             lblAreaReal.setText(String.format(formato, areaReal));
 
-            // Guardar el contexto del cálculo exitoso (NUEVO)
+            // Guardar el contexto para el redibujo y para el futuro guardado
             this.lastCalculadora = calculadora;
             this.lastA = inicioIntervalo;
             this.lastB = finIntervalo;
             this.lastN = n;
-            this.calculationSuccessful = true;
+            this.calculationSuccessful = true; // El cálculo fue exitoso
 
             // Dibujar con la configuración actual de CheckBox
             dibujarGrafico(calculadora, inicioIntervalo, finIntervalo, n);
+            lblMensajeError.setText("Cálculo realizado. Presione 'Guardar' para almacenar en el historial.");
+
 
         } catch (NumberFormatException e) {
             lblMensajeError.setText("Error: Por favor, ingrese valores numéricos válidos en todos los campos.");
         } catch (Exception e) {
-            lblMensajeError.setText("Ocurrió un error inesperado.");
+            lblMensajeError.setText("Ocurrió un error inesperado al calcular.");
             e.printStackTrace();
         }
     }
+
+    //-------------------------------------------------------------
+    // MÉTODO PARA MOSTRAR HISTORIAL Y CARGAR CÁLCULO
+    //-------------------------------------------------------------
+    @FXML
+    private void mostrarHistorial(ActionEvent event) {
+        List<CalculoGuardado> historial = areaDAO.obtenerHistorial();
+
+        if (historial.isEmpty()) {
+            lblMensajeError.setText("El historial de cálculos está vacío.");
+            return;
+        }
+
+        // Configura el ChoiceDialog para que muestre el toString() de CalculoGuardado
+        ChoiceDialog<CalculoGuardado> dialog = new ChoiceDialog<>(historial.get(0), historial);
+        dialog.setTitle("Historial de Cálculos");
+        dialog.setHeaderText("Selecciona un cálculo anterior para cargar (ID - f(x) - Área):");
+        dialog.setContentText("Cálculo:");
+
+        dialog.showAndWait().ifPresent(this::cargarCalculoSeleccionado);
+    }
+
+    //-------------------------------------------------------------
+    // MÉTODO PARA APLICAR EL CÁLCULO SELECCIONADO
+    //-------------------------------------------------------------
+    private void cargarCalculoSeleccionado(CalculoGuardado calculo) {
+        // 1. Poner los valores en los TextField
+        txtA.setText(String.valueOf(calculo.getCoefA()));
+        txtB.setText(String.valueOf(calculo.getCoefB()));
+        txtC.setText(String.valueOf(calculo.getCoefC()));
+        txtIntervaloA.setText(String.valueOf(calculo.getIntervaloA()));
+        txtIntervaloB.setText(String.valueOf(calculo.getIntervaloB()));
+        txtRectangulosN.setText(String.valueOf(calculo.getNumRectangulos()));
+
+        // 2. Poner los resultados en los Label
+        String formato = "%.4f";
+        lblSumaInferior.setText(String.format(formato, calculo.getSumaInferior()));
+        lblSumaSuperior.setText(String.format(formato, calculo.getSumaSuperior()));
+        lblAreaReal.setText(String.format(formato, calculo.getAreaReal()));
+
+        // 3. Redibujar el gráfico
+        CalculadoraArea calculadora = new CalculadoraArea(
+                calculo.getCoefA(),
+                calculo.getCoefB(),
+                calculo.getCoefC()
+        );
+
+        // Guardar el contexto (para el redibujo y para el caso de que el usuario lo quiera volver a guardar)
+        this.lastCalculadora = calculadora;
+        this.lastA = calculo.getIntervaloA();
+        this.lastB = calculo.getIntervaloB();
+        this.lastN = calculo.getNumRectangulos();
+        this.calculationSuccessful = true;
+
+        dibujarGrafico(calculadora, calculo.getIntervaloA(), calculo.getIntervaloB(), calculo.getNumRectangulos());
+        lblMensajeError.setText("Cálculo del historial (ID " + calculo.getId() + ") cargado exitosamente.");
+    }
+
 
     //-------------------------------------------------------------
     // MÉTODO LIMPIAR CAMPOS
@@ -192,7 +299,6 @@ public class areaController {
         lblMensajeError.setText("");
         paneGrafico.getChildren().clear();
 
-        // Limpiar contexto guardado (NUEVO)
         this.calculationSuccessful = false;
         this.lastCalculadora = null;
 
@@ -201,7 +307,7 @@ public class areaController {
     }
 
     //-------------------------------------------------------------
-    // MÉTODOS DE DIBUJO (ORDEN CORREGIDO Y CON FILTRO DE VISIBILIDAD)
+    // MÉTODOS DE DIBUJO (Sin cambios)
     //-------------------------------------------------------------
     private void dibujarGrafico(CalculadoraArea calculadora, double A, double B, int N) {
         paneGrafico.getChildren().clear();
@@ -231,7 +337,6 @@ public class areaController {
         double ejeY_pixel = (altoPane - 30) - (0 - yMin) * factorEscalaY;
 
         // 1. DIBUJAR RECTÁNGULOS PRIMERO (QUEDARÁN ABAJO)
-        // ------------------------------------------------------------------
         double deltaX = (B - A) / N;
         String formatoTooltip = "%.6f";
 
@@ -267,8 +372,6 @@ public class areaController {
 
 
         // 2. DIBUJAR PARÁBOLA Y EJES DESPUÉS (QUEDARÁN ARRIBA)
-        // ------------------------------------------------------------------
-        // Dibujar Parábola (Curva Negra)
         double pasoDibujo = (B - A) / 100.0;
         double ultimoX = 0;
         double ultimoY = 0;
@@ -290,11 +393,12 @@ public class areaController {
             ultimoY = y_pixel;
         }
 
-        // Dibujar Ejes (Dibujados al final para que estén sobre el área de dibujo)
+        // Dibujar Ejes
         paneGrafico.getChildren().add(new Line(margenIzquierdo, ejeY_pixel, anchoPane, ejeY_pixel));
         paneGrafico.getChildren().add(new Line(margenIzquierdo, 0, margenIzquierdo, altoPane - 30));
-        // ------------------------------------------------------------------
     }
+
+
 
     private Rectangle crearRectangulo(double x_pixel, double ancho_pixel, double altura_real, double yMin, double factorEscalaY, Color color) {
         double altoPane = paneGrafico.getHeight();
