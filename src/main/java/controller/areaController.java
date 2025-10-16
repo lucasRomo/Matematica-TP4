@@ -17,12 +17,13 @@ import javafx.scene.control.ChoiceDialog;
 import javafx.scene.layout.Pane;
 import javafx.scene.paint.Color;
 import javafx.scene.shape.Line;
+import javafx.scene.shape.Shape;
 import javafx.scene.shape.Rectangle;
 import javafx.stage.Stage;
 import java.io.IOException;
 import java.util.List;
 import java.util.Arrays;
-// import javafx.scene.control.Alert;
+import java.util.function.DoubleFunction;
 
 public class areaController {
 
@@ -61,6 +62,16 @@ public class areaController {
     private void initialize() {
         lblMensajeError.setText("");
 
+        // Aplicar el color BLANCO a los labels de resultado
+        lblSumaInferior.setStyle("-fx-text-fill: white; -fx-font-weight: bold;");
+        lblSumaSuperior.setStyle("-fx-text-fill: white; -fx-font-weight: bold;");
+        lblAreaReal.setStyle("-fx-text-fill: white; -fx-font-weight: bold;");
+
+        // Aplicar el color BLANCO a los CheckBox (la etiqueta)
+        chkMostrarInferior.setStyle("-fx-text-fill: white;");
+        chkMostrarSuperior.setStyle("-fx-text-fill: white;");
+
+
         // Inicializar el DAO y asegurar la creación de la tabla
         areaDAO = new AreaDAO();
         areaDAO.createTable();
@@ -76,12 +87,17 @@ public class areaController {
                 if (!newValue.matches("^-?(\\d*([\\.,]\\d*)?)?$")) {
                     tf.setText(oldValue);
                 }
+                // Si el texto cambia, resetear el estado de cálculo exitoso
+                this.calculationSuccessful = false;
             });
         }
 
         // 2. Configurar listeners para CheckBoxes
         chkMostrarInferior.setOnAction(e -> redrawGraph());
         chkMostrarSuperior.setOnAction(e -> redrawGraph());
+
+        // 3. Establecer un fondo blanco para el gráfico por defecto
+        paneGrafico.setStyle("-fx-border-color: #ccc; -fx-background-color: white;");
     }
 
     //-------------------------------------------------------------
@@ -123,7 +139,7 @@ public class areaController {
     }
 
     //-------------------------------------------------------------
-    // MÉTODO: GUARDAR EL CÁLCULO ACTUAL EN LA BASE DE DATOS (CORREGIDO)
+    // MÉTODO: GUARDAR EL CÁLCULO ACTUAL EN LA BASE DE DATOS
     //-------------------------------------------------------------
     @FXML
     private void guardarCalculoEnBD(ActionEvent event) {
@@ -133,12 +149,11 @@ public class areaController {
         }
 
         try {
-            // CORRECCIÓN SINTAXIS: Usar String.replace(String, String) para cambiar coma por punto.
-            double sumaInferior = Double.parseDouble(lblSumaInferior.getText().replace(",", "."));
-            double sumaSuperior = Double.parseDouble(lblSumaSuperior.getText().replace(",", "."));
-            double areaReal = Double.parseDouble(lblAreaReal.getText().replace(",", "."));
+            // Usar String.replace para asegurar formato de punto
+            double sumaInferior = Double.parseDouble(lblSumaInferior.getText().replace(',', '.'));
+            double sumaSuperior = Double.parseDouble(lblSumaSuperior.getText().replace(',', '.'));
+            double areaReal = Double.parseDouble(lblAreaReal.getText().replace(',', '.'));
 
-            // La llamada a lastCalculadora.getA/B/C ahora funciona si CalculadoraArea fue modificada.
             CalculoGuardado calculo = new CalculoGuardado(
                     lastCalculadora.getA(), lastCalculadora.getB(), lastCalculadora.getC(),
                     lastA, lastB, lastN,
@@ -164,6 +179,7 @@ public class areaController {
     @FXML
     private void calcularArea(ActionEvent event) {
         lblMensajeError.setText("");
+        // Aquí se borra el panel por primera vez (al hacer un cálculo nuevo)
         paneGrafico.getChildren().clear();
         this.calculationSuccessful = false;
 
@@ -181,6 +197,7 @@ public class areaController {
             double inicioIntervalo = Double.parseDouble(txtIntervaloA.getText().replace(',', '.'));
             double finIntervalo = Double.parseDouble(txtIntervaloB.getText().replace(',', '.'));
 
+            // Asegurarse de que N sea un entero y manejar la posible entrada decimal
             int n = Integer.parseInt(txtRectangulosN.getText().replace(',', '.').split("[\\.]")[0]);
 
             if (inicioIntervalo >= finIntervalo) {
@@ -307,122 +324,290 @@ public class areaController {
     }
 
     //-------------------------------------------------------------
-    // MÉTODOS DE DIBUJO (Sin cambios)
+    // MÉTODOS DE DIBUJO (VERSION FINAL ESTABLE CON COLORES Y LABELS CORREGIDOS)
     //-------------------------------------------------------------
     private void dibujarGrafico(CalculadoraArea calculadora, double A, double B, int N) {
+        // Borrar todos los elementos del panel para redibujar
         paneGrafico.getChildren().clear();
 
-        double anchoPane = paneGrafico.getWidth();
-        double altoPane = paneGrafico.getHeight();
+        // Fondo gris claro con borde suave
+        paneGrafico.setStyle("-fx-background-color: #f3f3f3; -fx-border-color: #bdbdbd; -fx-border-width: 1;");
+
+        final double anchoPane = paneGrafico.getWidth();
+        final double altoPane = paneGrafico.getHeight();
 
         boolean mostrarInferior = chkMostrarInferior.isSelected();
         boolean mostrarSuperior = chkMostrarSuperior.isSelected();
 
-        // --- CÁLCULO DE LA ESCALA DINÁMICA ---
-        double maximoY = calculadora.obtenerMaximoAbsoluto(A, B);
-        double minimoY = calculadora.obtenerMinimoAbsoluto(A, B);
+        // --- 1. Definir márgenes y rango X ---
+        final double rangoIntegracion = B - A;
+        // Margen extra horizontal: 10% del rango de integración
+        final double margenExtraX = rangoIntegracion * 0.10;
+        final double dibujoA = A - margenExtraX;
+        final double dibujoB = B + margenExtraX;
+        final double rangoX = dibujoB - dibujoA;
 
-        double yMin = Math.min(minimoY, 0);
-        double yMax = Math.max(maximoY, 0);
+        final double margenVertical = 50;
+        final double margenIzquierdo = 80; // Espacio para etiquetas Y
+        final double margenDerecho = 20;
+        final double anchoUtil = anchoPane - margenIzquierdo - margenDerecho;
 
-        double rangoY = yMax - yMin;
-        double margenVisual = rangoY * 0.1;
-        rangoY += 2 * margenVisual;
-        yMin -= margenVisual;
+        final double factorEscalaX = anchoUtil / rangoX;
+        DoubleFunction<Double> X_to_Pixel = x_real ->
+                margenIzquierdo + (x_real - dibujoA) * factorEscalaX;
 
-        double factorEscalaY = (altoPane - 60) / rangoY;
+        // --- 2. Escala Y (CORRECCIÓN CLAVE) ---
+        // Evaluar la función en el rango de DIBUJO [dibujoA, dibujoB]
+        double minYFuncion = calculadora.obtenerMinimoAbsoluto(dibujoA, dibujoB);
+        double maxYFuncion = calculadora.obtenerMaximoAbsoluto(dibujoA, dibujoB);
 
-        // Márgenes y Posición del Eje X
-        double margenIzquierdo = 30;
-        double ejeY_pixel = (altoPane - 30) - (0 - yMin) * factorEscalaY;
+        // Si los valores son inválidos o demasiado cercanos, usar un rango por defecto
+        if (Double.isNaN(minYFuncion) || Double.isNaN(maxYFuncion) || Math.abs(maxYFuncion - minYFuncion) < 0.001) {
+            minYFuncion = -5;
+            maxYFuncion = 5;
+        }
 
-        // 1. DIBUJAR RECTÁNGULOS PRIMERO (QUEDARÁN ABAJO)
+        // El rango de visualización debe incluir al 0 (Eje X) y la función.
+        double yDisplayMin = Math.min(0.0, minYFuncion);
+        double yDisplayMax = Math.max(0.0, maxYFuncion);
+
+        double rangoY = yDisplayMax - yDisplayMin;
+
+        // Margen visual vertical: 15% del rango de Y para "estirar" la gráfica y darle espacio
+        final double margenExtraY = rangoY * 0.15;
+        rangoY += 2 * margenExtraY;
+        final double yMinAjustado = yDisplayMin - margenExtraY;
+
+        final double altoUtil = altoPane - 2 * margenVertical;
+        final double factorEscalaY = altoUtil / rangoY;
+
+        // Función de conversión Y real a Píxel
+        DoubleFunction<Double> Y_to_Pixel = y_real ->
+                (altoPane - margenVertical) - (y_real - yMinAjustado) * factorEscalaY;
+
+        // Posición del eje X (Y=0) en píxeles
+        double ejeX_pixel = Y_to_Pixel.apply(0);
+
+
+        // --- 4. Dibujar rectángulos (Solo en el intervalo [A, B]) ---
         double deltaX = (B - A) / N;
-        String formatoTooltip = "%.6f";
 
-        Color colorSuperior = Color.LIMEGREEN.deriveColor(0, 1.0, 1.0, 0.7);
-        Color colorInferior = Color.NAVY.deriveColor(0, 1.0, 1.0, 0.7);
+        // Definición de colores con opacidad fija para asegurar contraste
+        Color colorInf = Color.rgb(33, 150, 243, 0.7); // Azul más oscuro y más opaco
+        Color colorSup = Color.rgb(76, 175, 80, 0.5); // Verde más claro y menos opaco
+
+        // Colores de borde (un tono más oscuro para un borde sutil)
+        Color bordeInf = colorInf.darker();
+        Color bordeSup = colorSup.darker();
+
 
         for (int i = 0; i < N; i++) {
-            double x_i = A + i * deltaX;
-            double x_i1 = A + (i + 1) * deltaX;
+            double xi = A + i * deltaX;
+            double xi1 = xi + deltaX;
 
-            double minHeight = calculadora.obtenerMinimoEnSubintervalo(x_i, x_i1);
-            double maxHeight = calculadora.obtenerMaximoEnSubintervalo(x_i, x_i1);
+            double maxH = calculadora.obtenerMaximoEnSubintervalo(xi, xi1); // para el superior
+            double minH = calculadora.obtenerMinimoEnSubintervalo(xi, xi1); // para el inferior
 
-            double x_pixel_i = margenIzquierdo + (x_i - A) * (anchoPane - margenIzquierdo) / (B - A);
-            double ancho_pixel = (x_i1 - x_i) * (anchoPane - margenIzquierdo) / (B - A);
+            double xPix = X_to_Pixel.apply(xi);
+            double anchoPix = deltaX * factorEscalaX;
+
+            // Determinar qué suma tiene el valor absoluto más grande (el rectángulo que abarca más área, sea positivo o negativo)
+            // Si el área es positiva, maxH > |minH| (ej. 5 > 1). Si el área es negativa, |minH| > maxH (ej. |-5| > |-1|).
+            boolean infEsMasGrande = Math.abs(minH) >= Math.abs(maxH);
 
 
-            // Rectángulo SUPERIOR (Solo si está habilitado)
-            if (mostrarSuperior) {
-                Rectangle rectSuperior = crearRectangulo(x_pixel_i, ancho_pixel, maxHeight, yMin, factorEscalaY, colorSuperior);
-                agregarTooltip(rectSuperior, "Sup: " + String.format(formatoTooltip, maxHeight * deltaX));
-                paneGrafico.getChildren().add(rectSuperior);
+            // Lógica de dibujo CORREGIDA para CheckBoxes y Tooltips (se invierten los colores para el caso negativo)
+
+            if (mostrarInferior && mostrarSuperior) {
+                // Ambos: Dibujar el más grande primero, y el más pequeño encima para el efecto "dentro"
+                Rectangle rBig = infEsMasGrande
+                        ? crearRectangulo(xPix, anchoPix, minH, yMinAjustado, factorEscalaY, colorInf, bordeInf) // Azul (Inferior) si es más grande
+                        : crearRectangulo(xPix, anchoPix, maxH, yMinAjustado, factorEscalaY, colorSup, bordeSup); // Verde (Superior) si es más grande
+
+                Rectangle rSmall = infEsMasGrande
+                        ? crearRectangulo(xPix, anchoPix, maxH, yMinAjustado, factorEscalaY, colorSup, bordeSup) // Verde (Superior) si el Azul fue más grande
+                        : crearRectangulo(xPix, anchoPix, minH, yMinAjustado, factorEscalaY, colorInf, bordeInf); // Azul (Inferior) si el Verde fue más grande
+
+                paneGrafico.getChildren().add(rBig);
+                paneGrafico.getChildren().add(rSmall);
+
+                // Reagregar Tooltips a ambos rectángulos
+                agregarTooltip(rBig, "Suma " + (infEsMasGrande ? "Inferior" : "Superior") + ": " + String.format("%.2f", infEsMasGrande ? minH * deltaX : maxH * deltaX));
+                agregarTooltip(rSmall, "Suma " + (infEsMasGrande ? "Superior" : "Inferior") + ": " + String.format("%.2f", infEsMasGrande ? maxH * deltaX : minH * deltaX));
+
+            } else if (mostrarInferior && !mostrarSuperior) {
+                // Solo Inferior: Dibujar el rectángulo de la Suma Inferior
+                Rectangle rInf = crearRectangulo(xPix, anchoPix, minH, yMinAjustado, factorEscalaY, colorInf, bordeInf);
+                paneGrafico.getChildren().add(rInf);
+                agregarTooltip(rInf, "Suma Inferior: " + String.format("%.2f", minH * deltaX));
+
+            } else if (!mostrarInferior && mostrarSuperior) {
+                // Solo Superior: Dibujar el rectángulo de la Suma Superior
+                Rectangle rSup = crearRectangulo(xPix, anchoPix, maxH, yMinAjustado, factorEscalaY, colorSup, bordeSup);
+                paneGrafico.getChildren().add(rSup);
+                agregarTooltip(rSup, "Suma Superior: " + String.format("%.2f", maxH * deltaX));
             }
-
-            // Rectángulo INFERIOR (Solo si está habilitado)
-            if (mostrarInferior) {
-                Rectangle rectInferior = crearRectangulo(x_pixel_i, ancho_pixel, minHeight, yMin, factorEscalaY, colorInferior);
-                agregarTooltip(rectInferior, "Inf: " + String.format(formatoTooltip, minHeight * deltaX));
-                paneGrafico.getChildren().add(rectInferior);
-            }
+            // Si ninguno está seleccionado, no se dibuja nada.
         }
-        // ------------------------------------------------------------------
 
+        // --- 3. Dibujar parábola (se movió después de los rectángulos para que quede encima) ---
+        double pasoDibujo = rangoX / 500.0;
+        double ultimoX = X_to_Pixel.apply(dibujoA);
+        double ultimoY = Y_to_Pixel.apply(calculadora.evaluar(dibujoA));
 
-        // 2. DIBUJAR PARÁBOLA Y EJES DESPUÉS (QUEDARÁN ARRIBA)
-        double pasoDibujo = (B - A) / 100.0;
-        double ultimoX = 0;
-        double ultimoY = 0;
-
-        for (int i = 0; i <= 100; i++) {
-            double x_real = A + i * pasoDibujo;
-            double y_real = calculadora.evaluar(x_real);
-
-            double x_pixel = margenIzquierdo + (x_real - A) * (anchoPane - margenIzquierdo) / (B - A);
-            double y_pixel = (altoPane - 30) - (y_real - yMin) * factorEscalaY;
-
-            if (i > 0) {
-                Line segmento = new Line(ultimoX, ultimoY, x_pixel, y_pixel);
-                segmento.setStroke(Color.BLACK);
-                segmento.setStrokeWidth(2.0);
-                paneGrafico.getChildren().add(segmento);
-            }
-            ultimoX = x_pixel;
-            ultimoY = y_pixel;
+        for (int i = 1; i <= 500; i++) {
+            double x = dibujoA + i * pasoDibujo;
+            double y = calculadora.evaluar(x);
+            double xPix = X_to_Pixel.apply(x);
+            double yPix = Y_to_Pixel.apply(y);
+            Line seg = new Line(ultimoX, ultimoY, xPix, yPix);
+            seg.setStroke(Color.BLACK);
+            seg.setStrokeWidth(2);
+            paneGrafico.getChildren().add(seg);
+            ultimoX = xPix;
+            ultimoY = yPix;
         }
 
-        // Dibujar Ejes
-        paneGrafico.getChildren().add(new Line(margenIzquierdo, ejeY_pixel, anchoPane, ejeY_pixel));
-        paneGrafico.getChildren().add(new Line(margenIzquierdo, 0, margenIzquierdo, altoPane - 30));
+
+        // --- 5. Ejes principales ---
+        Line ejeX = new Line(0, ejeX_pixel, anchoPane, ejeX_pixel);
+        ejeX.setStroke(Color.GRAY);
+        ejeX.setStrokeWidth(1.3);
+        paneGrafico.getChildren().add(ejeX);
+
+        double ejeY_pixel;
+        // Posicionar el Eje Y en X=0 si está dentro del rango de dibujo
+        if (0.0 >= dibujoA && 0.0 <= dibujoB) {
+            ejeY_pixel = X_to_Pixel.apply(0.0);
+        } else {
+            // Si no, posicionarlo en el margen izquierdo para etiquetas
+            ejeY_pixel = margenIzquierdo;
+        }
+        Line ejeY = new Line(ejeY_pixel, 0, ejeY_pixel, altoPane);
+        ejeY.setStroke(Color.GRAY);
+        ejeY.setStrokeWidth(1.3);
+        paneGrafico.getChildren().add(ejeY);
+
+        // --- 6. Dibujar ticks y valores numéricos ---
+        double tickX = calcularTickInterval(rangoX);
+        double tickY = calcularTickInterval(rangoY);
+
+        // Ticks en Eje X
+        double startX = Math.ceil(dibujoA / tickX) * tickX;
+        for (double x = startX; x <= dibujoB; x += tickX) {
+            double px = X_to_Pixel.apply(x);
+            Line tick = new Line(px, ejeX_pixel - 5, px, ejeX_pixel + 5);
+            tick.setStroke(Color.GRAY);
+            paneGrafico.getChildren().add(tick);
+
+            Label lbl = new Label(String.format("%.1f", x));
+            lbl.setLayoutX(px - 12);
+            lbl.setLayoutY(ejeX_pixel + 6);
+            lbl.setStyle("-fx-text-fill: black;");
+            paneGrafico.getChildren().add(lbl);
+        }
+
+        // Ticks en Eje Y
+        double startY = Math.ceil(yMinAjustado / tickY) * tickY;
+        // El límite superior se calcula con el rango ajustado: yMinAjustado + rangoY
+        for (double y = startY; y <= yMinAjustado + rangoY; y += tickY) {
+            double py = Y_to_Pixel.apply(y);
+            Line tick = new Line(ejeY_pixel - 5, py, ejeY_pixel + 5, py);
+            tick.setStroke(Color.GRAY);
+            paneGrafico.getChildren().add(tick);
+
+            Label lbl = new Label(String.format("%.1f", y));
+            lbl.setLayoutX(margenIzquierdo - 40); // Ubicación fija en el margen
+            lbl.setLayoutY(py - 10);
+            lbl.setStyle("-fx-text-fill: black;");
+            paneGrafico.getChildren().add(lbl);
+        }
+
+        // --- 7. Líneas punteadas rojas A y B (Límites de Integración) ---
+        double pxA = X_to_Pixel.apply(A);
+        double pxB = X_to_Pixel.apply(B);
+
+        Line lineaA = new Line(pxA, 0, pxA, altoPane);
+        lineaA.setStroke(Color.RED);
+        lineaA.setStrokeWidth(1);
+        lineaA.getStrokeDashArray().addAll(6.0, 6.0);
+        paneGrafico.getChildren().add(lineaA);
+
+        Line lineaB = new Line(pxB, 0, pxB, altoPane);
+        lineaB.setStroke(Color.RED);
+        lineaB.setStrokeWidth(1);
+        lineaB.getStrokeDashArray().addAll(6.0, 6.0);
+        paneGrafico.getChildren().add(lineaB);
+
+        // Se ajusta la posición horizontal para separar el texto de la línea
+        Label lblA = new Label("A=" + String.format("%.1f", A));
+        lblA.setStyle("-fx-text-fill: red;");
+        lblA.setLayoutX(pxA - 40); // Ubicación a la izquierda de A
+        lblA.setLayoutY(ejeX_pixel + 12);
+        paneGrafico.getChildren().add(lblA);
+
+        // CORRECCIÓN 4: Mover lblB para que siempre esté a la derecha de la línea roja punteada B
+        Label lblB = new Label("B=" + String.format("%.1f", B));
+        lblB.setStyle("-fx-text-fill: red;");
+        lblB.setLayoutX(pxB + 5); // 5 píxeles a la derecha de la línea B
+        lblB.setLayoutY(ejeX_pixel + 12);
+        paneGrafico.getChildren().add(lblB);
     }
 
 
+    //-------------------------------------------------------------
+    // FUNCIÓN AUXILIAR PARA CALCULAR EL INTERVALO ÓPTIMO DE MARCAS
+    //-------------------------------------------------------------
+    private double calcularTickInterval(double range) {
+        if (range <= 0) return 1.0;
 
-    private Rectangle crearRectangulo(double x_pixel, double ancho_pixel, double altura_real, double yMin, double factorEscalaY, Color color) {
-        double altoPane = paneGrafico.getHeight();
-        double margenInferior = 30;
+        // Objetivo: tener alrededor de 5 a 10 marcas en el rango
+        double tempInterval = range / 8.0;
+
+        // Encontrar la potencia de 10 más cercana
+        double powerOfTen = Math.pow(10, Math.floor(Math.log10(tempInterval)));
+
+        // Probar con factores de 1, 2, y 5
+        double tickInterval = powerOfTen;
+        if (tempInterval > 5 * powerOfTen) {
+            tickInterval = 10 * powerOfTen;
+        } else if (tempInterval > 2 * powerOfTen) {
+            tickInterval = 5 * powerOfTen;
+        } else if (tempInterval > 1 * powerOfTen) {
+            tickInterval = 2 * powerOfTen;
+        }
+
+        return tickInterval;
+    }
+
+
+    private Rectangle crearRectangulo(double x_pixel, double ancho_pixel, double altura_real, double yMinAjustado, double factorEscalaY, Color color, Color borde) {
+        final double altoPane = paneGrafico.getHeight();
+        final double margenVertical = 50; // Usar el mismo margen vertical que en dibujarGrafico
 
         double altura_pixel = Math.abs(altura_real) * factorEscalaY;
         Rectangle rect = new Rectangle(ancho_pixel, altura_pixel);
         rect.setX(x_pixel);
 
-        double y_base_pixel = (altoPane - margenInferior) - (0 - yMin) * factorEscalaY;
+        // Posición Y=0 en píxeles (base para los rectángulos)
+        // Se calcula con el mismo yMinAjustado y margenVertical usado en el escalado
+        double y_base_pixel = (altoPane - margenVertical) - (0 - yMinAjustado) * factorEscalaY;
 
         if (altura_real >= 0) {
+            // El rectángulo se dibuja 'hacia arriba' desde la base (Y=0)
             rect.setY(y_base_pixel - altura_pixel);
         } else {
+            // El rectángulo se dibuja 'hacia abajo' desde la base (Y=0)
             rect.setY(y_base_pixel);
         }
 
         rect.setFill(color);
-        rect.setStroke(color.darker());
+        rect.setStroke(borde); // Usar el color de borde definido
         rect.setStrokeWidth(0.5);
         return rect;
     }
 
-    private void agregarTooltip(javafx.scene.shape.Shape shape, String texto) {
+    private void agregarTooltip(Shape shape, String texto) {
         Tooltip tooltip = new Tooltip(texto);
         Tooltip.install(shape, tooltip);
     }
