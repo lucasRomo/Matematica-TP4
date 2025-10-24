@@ -78,6 +78,42 @@ public class CalculadoraArea {
         return alturaMaxima;
     }
 
+
+
+    /** * Calcula la Suma Inferior de Riemann (aproximación por mínimos). */
+    public double calcularSumaInferior(double inicioIntervalo, double finIntervalo, int rectangulos) {
+        double deltaX = (finIntervalo - inicioIntervalo) / rectangulos;
+        double sumaInferior = 0;
+
+        for (int i = 0; i < rectangulos; i++) {
+            double x_i = inicioIntervalo + i * deltaX;
+            double x_i1 = inicioIntervalo + (i + 1) * deltaX;
+
+            double alturaMinima = obtenerMinimoEnSubintervalo(x_i, x_i1);
+
+            sumaInferior += alturaMinima * deltaX;
+        }
+
+        return sumaInferior;
+    }
+
+    /** * Calcula la Suma Superior de Riemann (aproximación por máximos). */
+    public double calcularSumaSuperior(double inicioIntervalo, double finIntervalo, int rectangulos) {
+        double deltaX = (finIntervalo - inicioIntervalo) / rectangulos;
+        double sumaSuperior = 0;
+
+        for (int i = 0; i < rectangulos; i++) {
+            double x_i = inicioIntervalo + i * deltaX;
+            double x_i1 = inicioIntervalo + (i + 1) * deltaX;
+
+            double alturaMaxima = obtenerMaximoEnSubintervalo(x_i, x_i1);
+
+            sumaSuperior += alturaMaxima * deltaX;
+        }
+
+        return sumaSuperior;
+    }
+
     /** Obtiene el valor MÁXIMO ABSOLUTO de la función en el intervalo [A, B] para ajustar la escala del gráfico. */
     public double obtenerMaximoAbsoluto(double A, double B) {
         double verticeX = a != 0 ? -this.b / (2 * this.a) : Double.NaN;
@@ -114,39 +150,5 @@ public class CalculadoraArea {
         }
 
         return minimo;
-    }
-
-    /** * Calcula la Suma Inferior de Riemann (aproximación por mínimos). */
-    public double calcularSumaInferior(double inicioIntervalo, double finIntervalo, int rectangulos) {
-        double deltaX = (finIntervalo - inicioIntervalo) / rectangulos;
-        double sumaInferior = 0;
-
-        for (int i = 0; i < rectangulos; i++) {
-            double x_i = inicioIntervalo + i * deltaX;
-            double x_i1 = inicioIntervalo + (i + 1) * deltaX;
-
-            double alturaMinima = obtenerMinimoEnSubintervalo(x_i, x_i1);
-
-            sumaInferior += alturaMinima * deltaX;
-        }
-
-        return sumaInferior;
-    }
-
-    /** * Calcula la Suma Superior de Riemann (aproximación por máximos). */
-    public double calcularSumaSuperior(double inicioIntervalo, double finIntervalo, int rectangulos) {
-        double deltaX = (finIntervalo - inicioIntervalo) / rectangulos;
-        double sumaSuperior = 0;
-
-        for (int i = 0; i < rectangulos; i++) {
-            double x_i = inicioIntervalo + i * deltaX;
-            double x_i1 = inicioIntervalo + (i + 1) * deltaX;
-
-            double alturaMaxima = obtenerMaximoEnSubintervalo(x_i, x_i1);
-
-            sumaSuperior += alturaMaxima * deltaX;
-        }
-
-        return sumaSuperior;
     }
 }

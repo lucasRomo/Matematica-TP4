@@ -90,7 +90,7 @@
             <Label fx:id="lblSumaSuperior" text="0.0000" style="-fx-font-weight: bold;" />
         </VBox>
         <VBox alignment="CENTER" spacing="5.0">
-            <Label text="Área Real (Integral):" />
+            <Label text="Área Real:" />
             <Label fx:id="lblAreaReal" text="0.0000" style="-fx-font-weight: bold;" />
         </VBox>
     </HBox>

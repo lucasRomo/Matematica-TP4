@@ -33,7 +33,7 @@ public class menuController {
     }
 
     public void abrirModuloMatrices(ActionEvent event) throws IOException {
-        cambiarEscena(event, "/menuentero.fxml", "Sistema de Ecuaciones");
+        cambiarEscena(event, "/matrices.fxml", "Sistema de Ecuaciones");
     }
 
     public void abrirModuloArea(ActionEvent event) throws IOException {
