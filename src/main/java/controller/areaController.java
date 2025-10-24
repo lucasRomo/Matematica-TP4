@@ -432,20 +432,20 @@ public class areaController {
                 paneGrafico.getChildren().add(rSmall);
 
                 // Reagregar Tooltips a ambos rectángulos
-                agregarTooltip(rBig, "Suma " + (infEsMasGrande ? "Inferior" : "Superior") + ": " + String.format("%.2f", infEsMasGrande ? minH * deltaX : maxH * deltaX));
-                agregarTooltip(rSmall, "Suma " + (infEsMasGrande ? "Superior" : "Inferior") + ": " + String.format("%.2f", infEsMasGrande ? maxH * deltaX : minH * deltaX));
+                agregarTooltip(rBig, "Area " + (infEsMasGrande ? "Inferior" : "Superior") + ": " + String.format("%.2f", infEsMasGrande ? minH * deltaX : maxH * deltaX));
+                agregarTooltip(rSmall, "Area " + (infEsMasGrande ? "Superior" : "Inferior") + ": " + String.format("%.2f", infEsMasGrande ? maxH * deltaX : minH * deltaX));
 
             } else if (mostrarInferior && !mostrarSuperior) {
                 // Solo Inferior: Dibujar el rectángulo de la Suma Inferior
                 Rectangle rInf = crearRectangulo(xPix, anchoPix, minH, yMinAjustado, factorEscalaY, colorInf, bordeInf);
                 paneGrafico.getChildren().add(rInf);
-                agregarTooltip(rInf, "Suma Inferior: " + String.format("%.2f", minH * deltaX));
+                agregarTooltip(rInf, "Area Inferior: " + String.format("%.2f", minH * deltaX));
 
             } else if (!mostrarInferior && mostrarSuperior) {
                 // Solo Superior: Dibujar el rectángulo de la Suma Superior
                 Rectangle rSup = crearRectangulo(xPix, anchoPix, maxH, yMinAjustado, factorEscalaY, colorSup, bordeSup);
                 paneGrafico.getChildren().add(rSup);
-                agregarTooltip(rSup, "Suma Superior: " + String.format("%.2f", maxH * deltaX));
+                agregarTooltip(rSup, "Area Superior: " + String.format("%.2f", maxH * deltaX));
             }
             // Si ninguno está seleccionado, no se dibuja nada.
         }

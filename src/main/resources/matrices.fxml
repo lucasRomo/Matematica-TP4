@@ -64,13 +64,28 @@
 
     <Separator />
 
-    <VBox alignment="CENTER_LEFT" spacing="5.0">
-        <Label style="-fx-font-weight: bold;" text="Clasificación del Sistema:" />
-        <Label fx:id="systemClassification" style="-fx-text-fill: blue;" text="Esperando entrada..." />
-
-        <Label style="-fx-font-weight: bold; margin-top: 10;" text="Soluciones:" />
-        <Label fx:id="solutionX" text="x =" />
-        <Label fx:id="solutionY" text="y =" />
-        <Label fx:id="solutionZ" text="z =" />
+    <VBox alignment="CENTER" spacing="5.0">
+        <Label style="-fx-font-weight: bold; -fx-text-fill: white;" text="Clasificación del Sistema:" />
+        <Label fx:id="systemClassification" text="Esperando entrada..." style="-fx-text-fill: #FFFF00; -fx-font-size: 14px;" />
     </VBox>
+
+    <Separator />
+
+    <Label style="-fx-font-weight: bold; -fx-text-fill: white; -fx-padding: 10 0 0 0;" text="Soluciones:" />
+
+    <GridPane alignment="CENTER" hgap="30.0" vgap="10.0">
+        <columnConstraints>
+            <ColumnConstraints halignment="RIGHT" minWidth="40" prefWidth="40" />
+            <ColumnConstraints halignment="LEFT" minWidth="150" prefWidth="150" />
+        </columnConstraints>
+
+        <Label text="   " GridPane.columnIndex="0" GridPane.rowIndex="0" style="-fx-font-size: 18px;" />
+        <Label fx:id="solutionX" text="x =" GridPane.columnIndex="1" GridPane.rowIndex="0" style="-fx-font-size: 18px; -fx-font-weight: bold;" />
+
+        <Label text="   " GridPane.columnIndex="0" GridPane.rowIndex="1" style="-fx-font-size: 18px;" />
+        <Label fx:id="solutionY" text="y =" GridPane.columnIndex="1" GridPane.rowIndex="1" style="-fx-font-size: 18px; -fx-font-weight: bold;" />
+
+        <Label text="   " GridPane.columnIndex="0" GridPane.rowIndex="2" style="-fx-font-size: 18px;" />
+        <Label fx:id="solutionZ" text="z =" GridPane.columnIndex="1" GridPane.rowIndex="2" style="-fx-font-size: 18px; -fx-font-weight: bold;" />
+    </GridPane>
 </VBox>
